@@ -40,6 +40,13 @@ def test_proxy_none_disables_proxy_settings(monkeypatch):
     assert settings.api_proxy is None
 
 
+def test_hello_message_comes_from_the_environment(monkeypatch):
+    monkeypatch.setenv("BOT_HELLO_MESSAGE", "  Hi there!  ")
+    assert Settings.from_env().hello_message == "Hi there!"
+    monkeypatch.setenv("BOT_HELLO_MESSAGE", "   ")
+    assert Settings.from_env().hello_message is None
+
+
 def test_invalid_boolean_is_rejected(monkeypatch):
     monkeypatch.setenv("BOT_ONCE", "sometimes")
     with pytest.raises(ConfigurationError):

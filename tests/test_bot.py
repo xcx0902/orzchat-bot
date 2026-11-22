@@ -89,6 +89,67 @@ async def test_bot_replies_to_a_message():
     assert llm.calls[0][-1] == {"role": "user", "content": "hello"}
 
 
+async def test_hello_message_is_sent_on_match_and_kept_in_history():
+    client = FakeClient(
+        [
+            ChatEvent("matched", {}),
+            ChatEvent("message", {"text": "hello"}),
+            ChatEvent("partner_disconnected", {}),
+        ]
+    )
+    llm = FakeLLM("Model reply")
+    bot = Bot(
+        make_settings(hello_message="Hi there!"),
+        llm=llm,
+        client_factory=lambda: client,  # type: ignore[arg-type]
+    )
+
+    await bot.run()
+
+    assert client.sent == ["Hi there!", "Model reply"]
+    assert llm.calls[0][1] == {"role": "assistant", "content": "Hi there!"}
+    assert llm.calls[0][2] == {"role": "user", "content": "hello"}
+
+
+async def test_duplicate_matched_events_do_not_repeat_the_greeting():
+    client = FakeClient(
+        [
+            ChatEvent("matched", {}),
+            ChatEvent("matched", {}),
+            ChatEvent("message", {"text": "hello"}),
+            ChatEvent("partner_disconnected", {}),
+        ]
+    )
+    bot = Bot(
+        make_settings(hello_message="Hi!"),
+        llm=FakeLLM("reply"),
+        client_factory=lambda: client,  # type: ignore[arg-type]
+    )
+
+    await bot.run()
+
+    assert client.sent == ["Hi!", "reply"]
+
+
+async def test_hello_message_is_not_sent_in_dry_run():
+    client = FakeClient(
+        [
+            ChatEvent("matched", {}),
+            ChatEvent("message", {"text": "hello"}),
+            ChatEvent("partner_disconnected", {}),
+        ]
+    )
+    bot = Bot(
+        make_settings(dry_run=True, hello_message="Hi!"),
+        llm=None,
+        client_factory=lambda: client,  # type: ignore[arg-type]
+    )
+
+    await bot.run()
+
+    assert client.sent == []
+
+
 async def test_debounce_combines_rapid_messages():
     client = FakeClient(
         [

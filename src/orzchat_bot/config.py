@@ -43,6 +43,7 @@ class Settings:
     extra_headers: dict[str, str] | None = field(default=None, repr=False)
 
     system_prompt: str = DEFAULT_SYSTEM_PROMPT
+    hello_message: str | None = None
     max_history: int = 10
     max_reply_chars: int = MAX_MESSAGE_CHARS
     debounce_seconds: float = 0.5
@@ -78,6 +79,7 @@ class Settings:
             extra_headers=_json_string_map("OPENAI_EXTRA_HEADERS"),
             system_prompt=os.getenv("BOT_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT).strip()
             or DEFAULT_SYSTEM_PROMPT,
+            hello_message=(os.getenv("BOT_HELLO_MESSAGE") or "").strip() or None,
             max_history=_int("BOT_MAX_HISTORY", 10),
             max_reply_chars=_int("BOT_MAX_REPLY_CHARS", MAX_MESSAGE_CHARS),
             debounce_seconds=_float("BOT_DEBOUNCE_SECONDS", 0.5),
@@ -100,6 +102,8 @@ class Settings:
             raise ConfigurationError("ORZCHAT_PROXY must be an http:// or https:// URL.")
         if not self.auth_salt:
             raise ConfigurationError("ORZCHAT_AUTH_SALT must not be empty.")
+        if self.hello_message is not None and not self.hello_message.strip():
+            raise ConfigurationError("BOT_HELLO_MESSAGE must not be blank.")
         if not self.base_url.startswith(("http://", "https://")):
             raise ConfigurationError("OPENAI_BASE_URL must start with http:// or https://.")
         if self.api_proxy is not None and not self.api_proxy.startswith(("http://", "https://")):

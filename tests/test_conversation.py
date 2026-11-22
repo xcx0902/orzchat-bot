@@ -25,6 +25,29 @@ def test_completed_exchanges_are_included_in_order():
     ]
 
 
+def test_greeting_is_included_before_the_first_user_turn():
+    conversation = Conversation("be nice", max_exchanges=5)
+    conversation.set_opening("Hello!")
+    conversation.record_exchange("one", "first")
+    assert conversation.build_messages("two") == [
+        {"role": "system", "content": "be nice"},
+        {"role": "assistant", "content": "Hello!"},
+        {"role": "user", "content": "one"},
+        {"role": "assistant", "content": "first"},
+        {"role": "user", "content": "two"},
+    ]
+
+
+def test_reset_clears_the_greeting():
+    conversation = Conversation("s", max_exchanges=5)
+    conversation.set_opening("Hello!")
+    conversation.reset()
+    assert conversation.build_messages("hi") == [
+        {"role": "system", "content": "s"},
+        {"role": "user", "content": "hi"},
+    ]
+
+
 def test_oldest_exchanges_are_dropped_as_a_pair():
     conversation = Conversation("s", max_exchanges=2)
     for index in range(4):

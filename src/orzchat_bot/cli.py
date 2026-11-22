@@ -62,6 +62,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Read the persona/system prompt from a UTF-8 file.",
     )
     parser.add_argument(
+        "--hello-message",
+        metavar="TEXT",
+        help=(
+            "Send this message immediately after matching, before any incoming "
+            "message (BOT_HELLO_MESSAGE). An empty value disables it."
+        ),
+    )
+    parser.add_argument(
         "--temperature",
         type=_parse_temperature,
         default=_UNSET,
@@ -214,6 +222,8 @@ def _apply_cli(settings: Settings, args: argparse.Namespace) -> Settings:
         changes["temperature"] = args.temperature
     if args.max_tokens is not _UNSET:
         changes["max_tokens"] = args.max_tokens
+    if args.hello_message is not None:
+        changes["hello_message"] = args.hello_message.strip() or None
     if args.log_messages is not None:
         changes["log_messages"] = args.log_messages
     if args.dry_run is not None:

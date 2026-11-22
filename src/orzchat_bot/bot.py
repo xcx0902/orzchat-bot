@@ -142,10 +142,14 @@ class Bot:
                     if event.type == "waiting":
                         logger.info("Waiting for a partner in %s...", self._room_label())
                     elif event.type == "matched":
+                        if matched:
+                            logger.debug("Ignoring a duplicate matched event.")
+                            continue
                         matched = True
                         conversation.reset()
-                        matched_event.set()
                         logger.info("Matched with a partner.")
+                        await self._send_hello(client, conversation)
+                        matched_event.set()
                     elif event.type == "partner_disconnected":
                         logger.info("Partner disconnected.")
                         return SessionOutcome(SessionResult.PARTNER_LEFT, matched, connected)
@@ -180,6 +184,34 @@ class Bot:
                 await asyncio.gather(worker, return_exceptions=True)
             await client.close()
             self._client = None
+
+    async def _send_hello(
+        self,
+        client: OrzChatClient,
+        conversation: Conversation,
+    ) -> None:
+        """Send the configured greeting before the partner's first message."""
+        if not self._settings.hello_message:
+            return
+        greeting = fit_message(
+            self._settings.hello_message,
+            self._settings.max_reply_chars,
+        )
+        if not greeting:
+            return
+        if self._settings.dry_run:
+            logger.info("Dry run: would greet with %s", self._preview(greeting))
+            return
+        if client.state is not ChatState.MATCHED:
+            logger.debug("Skipping the greeting because the partner is no longer connected.")
+            return
+        try:
+            await client.send_message(greeting)
+        except (OrzChatClosed, OrzChatStateError, ValueError) as exc:
+            logger.debug("Could not send the greeting: %s", exc)
+            return
+        conversation.set_opening(greeting)
+        logger.info("Outgoing greeting: %s", self._preview(greeting))
 
     async def _reply_worker(
         self,

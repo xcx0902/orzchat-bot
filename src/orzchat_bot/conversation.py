@@ -17,6 +17,7 @@ class Conversation:
 
     system_prompt: str
     max_exchanges: int = 10
+    _opening: str | None = field(default=None, init=False, repr=False)
     _turns: deque[tuple[str, str]] = field(default_factory=deque, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -28,11 +29,17 @@ class Conversation:
         messages: list[dict[str, str]] = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
+        if self._opening:
+            messages.append({"role": "assistant", "content": self._opening})
         for previous_user, previous_assistant in self._turns:
             messages.append({"role": "user", "content": previous_user})
             messages.append({"role": "assistant", "content": previous_assistant})
         messages.append({"role": "user", "content": user_text})
         return messages
+
+    def set_opening(self, assistant_text: str) -> None:
+        """Record a greeting the bot sent before the partner's first message."""
+        self._opening = assistant_text
 
     def record_exchange(self, user_text: str, assistant_text: str) -> None:
         """Record a completed exchange and discard the oldest ones."""
@@ -44,6 +51,7 @@ class Conversation:
 
     def reset(self) -> None:
         """Forget the conversation, for example when a new partner arrives."""
+        self._opening = None
         self._turns.clear()
 
     @property

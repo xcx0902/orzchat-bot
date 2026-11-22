@@ -50,6 +50,14 @@ Join a private room (recommended for testing):
 orzchat-bot test-room --model gpt-4o-mini
 ```
 
+Optionally greet the partner as soon as the match is made, before they send
+anything:
+
+```sh
+orzchat-bot test-room --model gpt-4o-mini \
+  --hello-message "Hi! What's on your mind?"
+```
+
 Open `https://orzchat.com/test-room` in a browser, enter the room, and send a
 message. The bot prints incoming and outgoing text in the terminal.
 
@@ -69,7 +77,8 @@ orzchat-bot test-room --dry-run
 ```
 
 `--dry-run` still performs the real OrzChat handshake and logs messages, but it
-never calls the model and never sends a reply.
+never calls the model and never sends a reply. A configured hello message is
+logged as a dry-run action rather than sent.
 
 ## Configuration
 
@@ -111,6 +120,7 @@ needed.
 | --- | --- | --- | --- |
 | `BOT_SYSTEM_PROMPT` | `--system-prompt` | see below | Persona and reply style. |
 | — | `--system-prompt-file` | — | Read the persona from a UTF-8 file. |
+| `BOT_HELLO_MESSAGE` | `--hello-message` | none | Send this message immediately after matching, before any incoming message. |
 | `BOT_MAX_HISTORY` | `--max-history` | `10` | Completed exchanges kept per partner. `0` disables history. |
 | `BOT_MAX_REPLY_CHARS` | `--max-reply-chars` | `300` | Outgoing message limit, capped at 300. |
 | `BOT_DEBOUNCE_SECONDS` | `--debounce` | `0.5` | Wait for follow-up lines before calling the model. |
@@ -175,9 +185,11 @@ by default.
 2. Sends a `join` frame with `room_id` and a freshly generated authorization
    object: `{ts, nonce, sig}`, where
    `sig = SHA-256(f"{ts}:{nonce}:{room_id}:{salt}")`.
-3. Waits for `waiting` and `matched` events.
+3. Waits for `waiting` and `matched` events. On match, optionally sends
+   `BOT_HELLO_MESSAGE` immediately. The greeting becomes the first assistant
+   turn in the conversation history, so the model knows it already said hello.
 4. On each `message` event, waits `BOT_DEBOUNCE_SECONDS` to collect consecutive
-   lines, builds `[system, ...history, user]`, calls
+   lines, builds `[system, greeting?, ...history, user]`, calls
    `POST /chat/completions`, trims the reply to one chat-sized message, and
    sends it.
 5. On `partner_disconnected`, closes the socket, resets the conversation, and
